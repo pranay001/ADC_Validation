@@ -119,7 +119,7 @@ def program_timeset(session: nidigital.Session, name: str, t: CycleTiming) -> No
     for edge, value in ((Edge.DRIVE_ON, 0.0), (Edge.DRIVE_DATA, t.sck_fall),
                         (Edge.DRIVE_RETURN, t.sck_rise), (Edge.DRIVE_OFF, off)):
         sck.configure_time_set_edge(name, edge, _td(value))
-    for pin, change in (("CS", t.cs_change), ("SDI", t.sdi_change)):
+    for pin, change in (("CS", t.cs_change), ("SDI", t.sdi_change), ("RESET", 0.0), ("CNV", 0.0)):
         p = session.pins[pin]
         p.configure_time_set_drive_format(name, DriveFormat.NR)
         for edge, value in ((Edge.DRIVE_ON, 0.0), (Edge.DRIVE_DATA, change), (Edge.DRIVE_OFF, off)):
@@ -130,6 +130,23 @@ def program_timeset(session: nidigital.Session, name: str, t: CycleTiming) -> No
 def program_frame(session: nidigital.Session, frame: str, timing: FrameTiming) -> None:
     for role, cycle in timing.by_role().items():
         program_timeset(session, timeset_name(frame, role), cycle)
+
+
+def open_session(setup: Setup) -> nidigital.Session:
+    """Session with pin map, levels (0.2/0.8 x VIO) and all time sets programmed to nominal timing."""
+    options = {"simulate": True, "driver_setup": {"Model": setup.model}} if setup.simulate else {}
+    session = nidigital.Session(setup.resource, options=options)
+    session.load_pin_map(str(setup.pinmap))
+    session.configure_voltage_levels(vil=0.2 * setup.vio, vih=0.8 * setup.vio, vol=0.2 * setup.vio,
+                                     voh=0.8 * setup.vio, vterm=0.5 * setup.vio)
+    nominal = nominal_frame(setup)
+    session.create_time_set(NOM_TIMESET)
+    program_timeset(session, NOM_TIMESET, nominal.mid)
+    for frame in FRAMES:
+        for role in ROLES:
+            session.create_time_set(timeset_name(frame, role))
+        program_frame(session, frame, nominal)
+    return session
 
 
 class Probe:
@@ -144,17 +161,7 @@ class Probe:
 
     def open(self) -> "Probe":
         s = self.setup
-        options = {"simulate": True, "driver_setup": {"Model": s.model}} if s.simulate else {}
-        self.session = nidigital.Session(s.resource, options=options)
-        self.session.load_pin_map(str(s.pinmap))
-        self.session.configure_voltage_levels(vil=0.2 * s.vio, vih=0.8 * s.vio, vol=0.2 * s.vio,
-                                              voh=0.8 * s.vio, vterm=0.5 * s.vio)
-        self.session.create_time_set(NOM_TIMESET)
-        program_timeset(self.session, NOM_TIMESET, self.nominal.mid)
-        for frame in FRAMES:
-            for role in ROLES:
-                self.session.create_time_set(timeset_name(frame, role))
-            program_frame(self.session, frame, self.nominal)
+        self.session = open_session(s)
         source = probe_source(s.frames_per_point, sdo_expect=self.sdo_expect)
         pattern = compile_pattern(source, self.build_dir, s.pinmap, s.compiler)
         self.session.load_pattern(str(pattern))

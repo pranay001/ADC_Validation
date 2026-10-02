@@ -8,6 +8,9 @@
     <DUTPin name="SCK" />
     <DUTPin name="SDI" />
     <DUTPin name="SDO" />
+    <DUTPin name="RESET" />
+    <DUTPin name="CNV" />
+    <DUTPin name="GP0" />
   </Pins>
   <PinGroups />
   <Sites>
@@ -18,5 +21,8 @@
     <Connection pin="SCK" siteNumber="0" instrument="digital1" channel="7" />
     <Connection pin="SDI" siteNumber="0" instrument="digital1" channel="12" />
     <Connection pin="SDO" siteNumber="0" instrument="digital1" channel="18" />
+    <Connection pin="RESET" siteNumber="0" instrument="digital1" channel="21" />
+    <Connection pin="CNV" siteNumber="0" instrument="digital1" channel="25" />
+    <Connection pin="GP0" siteNumber="0" instrument="digital1" channel="29" />
   </Connections>
 </PinMap>
