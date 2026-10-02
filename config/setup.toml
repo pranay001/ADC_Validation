@@ -1,0 +1,29 @@
+# Bench setup for the AD4691/AD4692 SPI timing tests.
+# Supplies (AVDD, LDO_IN, VDD, VIO, REF) are controlled manually: no code touches them.
+
+[instrument]
+resource = "digital1"
+model = "6571"
+simulate = true            # no DUT in simulation: every probe passes, results are NOT valid measurements
+pinmap = "digital/AD469x.pinmap"   # pin -> channel assignment (placeholder channels for now)
+compiler = "C:/Program Files/National Instruments/Digital Pattern Compiler/DigitalPatternCompiler.exe"
+
+[levels]
+vio = 1.8                  # V. Must match the externally supplied VIO
+# VIL/VIH = 0.2/0.8 * VIO and VOL/VOH = 0.2/0.8 * VIO (data sheet Figure 2), VTERM = VIO/2
+
+[run]
+frames_per_point = 1000    # N probe frames per data value per sweep point
+guard_band_ns = 0.5        # G: tester edge-placement accuracy; the at-spec point is G MORE severe than the limit
+bisect_resolution_ns = 0.1 # boundary search resolution
+sdo_strobe_ns = 12.0       # SDO strobe after SCK falling edge in stressed read cycles of the clock tests (tDSDO max = 8 ns)
+boundary_repeats = 3       # confirmations of the located boundary
+
+[nominal]                  # conservative timing used everywhere a parameter is NOT under test (one 100 ns cycle)
+period_ns = 100.0
+sck_fall_ns = 30.0         # first SCK fall is >= 30 ns after CS falls  (tEN limit 15 ns)
+sck_low_ns = 30.0          # SCK low 30 ns, high 70 ns, rising edge at 60 ns
+sdi_change_ns = 30.0       # SDI changes on the SCK fall: setup 30 ns, hold 70 ns
+sdo_strobe_after_fall_ns = 20.0
+cs_lead_change_ns = 0.0    # CS falls at the start of the lead cycle
+cs_last_change_ns = 70.0   # CS rises 10 ns after the last SCK rising edge (tSCKCSB limit 2 ns); CS high >= 30 ns (tCSBH limit 10 ns)

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PinMap schemaVersion="1.1" xmlns="http://www.ni.com/TestStand/SemiconductorModule/PinMap.xsd">
+  <Instruments>
+    <NIDigitalPatternInstrument name="digital1" numberOfChannels="32" />
+  </Instruments>
+  <Pins>
+    <DUTPin name="CS" />
+    <DUTPin name="SCK" />
+    <DUTPin name="SDI" />
+    <DUTPin name="SDO" />
+  </Pins>
+  <PinGroups />
+  <Sites>
+    <Site siteNumber="0" />
+  </Sites>
+  <Connections>
+    <Connection pin="CS" siteNumber="0" instrument="digital1" channel="3" />
+    <Connection pin="SCK" siteNumber="0" instrument="digital1" channel="7" />
+    <Connection pin="SDI" siteNumber="0" instrument="digital1" channel="12" />
+    <Connection pin="SDO" siteNumber="0" instrument="digital1" channel="18" />
+  </Connections>
+</PinMap>
