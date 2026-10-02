@@ -66,3 +66,24 @@ Before real measurements: set `simulate = false` in `config/setup.toml`, put the
 - Bench results at ambient temperature do not prove the full-temperature data sheet limits.
 - The device may tolerate more than the specification; in that case the report gives a lower bound on margin rather than a boundary.
 - tHSDI cannot go below about 0.4 ns hold with the present edge placement.
+
+## 6. Functional register tests (group C), `src/tests/test_c*.py`
+
+These use registers beyond the scratch pad, hardware reset, and CRC. Frames are built by `src/spi_timing/bus.py` (`Script` of write/read/reset/wait operations, one pattern per script, SDO captured with a serial capture waveform), the register map is in `src/spi_timing/registers.py` (Table 24, checked against the PDF page image). Nominal timing everywhere; expected values are checked in Python after the burst.
+
+| Test | Checks |
+|---|---|
+| `test_c01_reset_values` | every defined register read after hardware reset vs Table 24 (PRODUCT_ID accepts AD4691 0x11 / AD4692 0x12; CONFIG_INn and STATE_RESET_REG are report-only because the data sheet contradicts itself) |
+| `test_c02_software_reset` | LSB-only or MSB-only SW_RST write does nothing; both bits reset all registers except SPI_CONFIG_A, bits self-clear, RESET_FLAG set |
+| `test_c03_reset_flag` | RESET_FLAG set by hardware and software reset, cleared by reading DEVICE_STATUS |
+| `test_c04_register_rw` | walking values per register, then a distinct value in every writable register (including the 128 AS_SLOTn), then the complement; registers that change device behaviour are never written |
+| `test_c05_readonly_protection` | writes to read-only registers ignored, INVALID_WR_ERROR set and clearable |
+| `test_c06_invalid_address` | undefined addresses (read and write) set INVALID_ADDR_ERROR; 0x02BF does not |
+| `test_c07_sck_count_error` | 7, 12, 15 data clocks set SCK_ERROR; the 7-clock write is ignored |
+| `test_c08_multibyte_partial` | one-byte read/write of STD_SEQ_CONFIG sets MB_PARTIAL_ERROR, partial write ignored, full 16-bit write works |
+| `test_c09_not_ready_error` | frame 20 us after the RESET edge sets NOT_RDY_ERROR and is ignored |
+| `test_c10_bulk_autodecrement` | 16-byte bulk read and write across ACC_DEPTH_IN15..0 |
+| `test_c11_bulk_direct_address` | several instruction+data groups in one frame with INST_MODE = 1, then back to autodecrement |
+| `test_c12_crc` | valid CRC accepted and device CRC correct; corrupted CRC ignored and CRC_ERROR set; CRC_EN_A or CRC_EN_B alone does not enable CRC |
+
+With `simulate = true` these tests compile, load and burst their patterns, then skip: there is no DUT behind SDO, so no result is evaluated. `src/tests/test_bus_encoding.py` checks the CRC-8 and frame encoding as pure functions. Assumptions to confirm on the first bench run: CRC coverage of single-register frames (instruction + data), that SPI_STATUS survives a hardware reset long enough to be read in C9, and the data sheet items listed in the report (CONFIG_INn / STATE_RESET_REG reset values, ACC_STS_SAT_2 address 0x01BE). The pin map now also contains RESET, CNV and GP0 (random channels, LFCSP has one GP pin); the timing patterns drive RESET high and CNV low.
